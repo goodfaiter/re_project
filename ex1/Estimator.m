@@ -67,12 +67,13 @@ if (tm == 0)
     % Do the initialization of your estimator here!
     
     % Replace the following:
-    posEst = [0,0];
-    oriEst = 0;
+    posEst = [0 0];    
+    oriEst = 0;    
     driftEst = 0;
-    posVar = [0 0];
-    oriVar = 0;
+    posVar = [(2*estConst.TranslationStartBound)^2 (2*estConst.TranslationStartBound)^2]*1/12;
+    oriVar = (2*estConst.RotationStartBound)^2*1/12;
     driftVar = 0;
+    estState = [posEst oriEst driftEst posVar oriVar driftVar tm];
 
     return;
 end
@@ -82,6 +83,37 @@ end
 % If we get this far tm is not equal to zero, and we are no longer
 % initializing.  Run the estimator.
 
+%Read previous iteration values
+prevX = estState(1);
+prevY = estState(2);
+prevOri = estState(3);
+prevDrift = estState(4);
+
+prevXVar = estState(5);
+prevYVar = estState(6);
+prevOriVar = estState(7);
+prevDriftVar = estState(8);
+
+time_step = tm - estState(9);
+
+Uv = actuate(1);
+Ur = actuate(2);
+B = estConst.WheelBase;
+W = estConst.WheelRadius;
+
+%Prior update/Prediction step
+%Mean:
+tspan = [tm tm+time_step];
+x0 = [prevX prevY prevOri];
+[t,x] = ode45(@(t,x) odefcn(t,x, estConst, estState, actuate), tspan, x0);
+
+predX = x(end,1);
+predY = x(end,2);
+predOri = x(end,3);
+
+%Variace:
+
+
 
 % Replace the following:
 posEst = [0 0];
@@ -90,5 +122,32 @@ driftEst = 0;
 posVar = [0 0];
 oriVar = 0;
 driftVar = 0;
+estState = [posEst oriEst driftEst posVar oriVar driftVar];
 
+end
+
+function dydt = odefcn(t, x, estConst, estState, actuate)
+prevX = estState(1);
+prevY = estState(2);
+prevOri = estState(3);
+prevDrift = estState(4);
+
+prevXVar = estState(5);
+prevYVar = estState(6);
+prevOriVar = estState(7);
+prevDriftVar = estState(8);
+
+Uv = actuate(1);
+Ur = actuate(2);
+B = estConst.WheelBase;
+W = estConst.WheelRadius;
+
+Sv = W*Uv;
+St = Sv*cos(Ur);
+Sr = -Sv*sin(Ur)/B;
+
+dydt = zeros(3,1);
+dydt(1) = St*cos(x(3));
+dydt(2) = St*sin(x(3));
+dydt(3) = Sr;
 end
