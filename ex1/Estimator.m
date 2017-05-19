@@ -105,14 +105,31 @@ W = estConst.WheelRadius;
 %Mean:
 tspan = [tm tm+time_step];
 x0 = [prevX prevY prevOri];
-[t,x] = ode45(@(t,x) odefcn(t,x, estConst, estState, actuate), tspan, x0);
+[t,predMean] = ode45(@(t,x) odefcn(t,x, estConst, estState, actuate), tspan, x0);
 
-predX = x(end,1);
-predY = x(end,2);
-predOri = x(end,3);
+predX = predMean(end,1);
+predY = predMean(end,2);
+predOri = predMean(end,3);
 
 %Variace:
+tspan = [tm tm+time_step];
+x0 = [prevXVar 0        0;
+      0        prevYVar 0;
+      0        0        prevOriVar];
+[t,predVar] = ode45(@(t,x) odefcn1(t,x, estConst, estState, actuate, tm), tspan, x0);
 
+predXVar = predVar(1,1);
+predYVar = predVar(2,2);
+predOriVar = predVar(3,3);
+
+% For an anonymous function such as: 
+% F = [matrix];
+% P = [matrix];
+% Q = [matrix];
+% R = [matrix];
+% H = [matrix];
+% Pdot = (t,p,F,P,Q,R,H) F * P + P * F' + Q - P * H' * R \ H * P;
+% [T, P] = ode45(@(t,p) Pdot(t,p,F,P,Q,R,H), tspan, zeros(6,1));
 
 
 % Replace the following:
@@ -150,4 +167,40 @@ dydt = zeros(3,1);
 dydt(1) = St*cos(x(3));
 dydt(2) = St*sin(x(3));
 dydt(3) = Sr;
+end
+
+function dydt = odefcn1(t, x, estConst, estState, actuate, tm)
+prevX = estState(1);
+prevY = estState(2);
+prevOri = estState(3);
+prevDrift = estState(4);
+
+prevXVar = estState(5);
+prevYVar = estState(6);
+prevOriVar = estState(7);
+prevDriftVar = estState(8);
+
+Uv = actuate(1);
+Ur = actuate(2);
+B = estConst.WheelBase;
+W = estConst.WheelRadius;
+Qv= estConst.VelocityInputPSD;
+
+Sv = W*Uv;
+St = Sv*cos(Ur);
+Sr = -Sv*sin(Ur)/B;
+r = Sr*(t-tm) + prevOri;
+
+dydt = zeros(3);
+
+A = [0 0 -St*sin(r)
+     0 0 St*cos(r)
+     0 0 0];
+ 
+L = [St*cos(r)
+     St*sin(r)
+     Sr];
+ 
+dydt = A*x + x*A' + L*Qv*L';
+
 end
