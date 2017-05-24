@@ -110,6 +110,9 @@ x0 = [prevX prevY prevOri];
 predX = predMean(end,1);
 predY = predMean(end,2);
 predOri = predMean(end,3);
+xp = [predX
+    predY
+    predOri];
 
 %Variace:
 tspan = [tm tm+time_step];
@@ -121,14 +124,45 @@ x0 = [prevXVar
 predXVar = predVar(end,1);
 predYVar = predVar(end,2);
 predOriVar = predVar(end,3);
+Pp = [predXVar 0 0
+    0 predYVar 0
+    predOriVar 0 0];
 
+%Estimation Update:
+%Mean:
+H = [0 0 1
+     0 0 1
+     predX*(predX^2 + predY^2)^(-1/2) predY*(predX^2 + predY^2)^(-1/2) 0];
+
+M = [1 0 0 0
+      0 1 1 0
+      0 0 0 1];
+
+cNoise = estConst.CompassNoise;
+gNoise = estConst.GyroNoise;
+dNoise = estConst.DistNoise;
+Qb = estConst.GyroDriftPSD;
+
+R = [cNoise 0 0 0;
+    0 gNoise 0 0;
+    0 0 dNoise 0;
+    0 0 0 Qb];
+
+K = Pp * H' * inv(H*Pp*H' + M*R*M');
+
+hk = [predOri
+    predOri
+    (predX^2 + predY^2)^(1/2)];
+xm = xp + K * (sense'-hk);
+
+Pm = (eye(3) - K*H)*Pp;
 
 % Replace the following:
-posEst = [0 0];
-oriEst = 0;
+posEst = [xm(1) xm(2)];
+oriEst = xm(3);
 driftEst = 0;
-posVar = [0 0];
-oriVar = 0;
+posVar = [Pm(1) Pm(2)];
+oriVar = Pm(3);
 driftVar = 0;
 estState = [posEst oriEst driftEst posVar oriVar driftVar tm];
 
