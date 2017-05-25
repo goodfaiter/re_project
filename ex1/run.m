@@ -114,6 +114,32 @@ trackErrorNorm = 0;
 if doplot
     % Add your plots here to debug the estimator and verify your
     % implementation.
+    subplot(2,2,1);
+    plot(tm, loc(:,1),'b');
+    hold on;
+    plot(tm, posEst(:,1),'r');
+    title('Estimation of X position')
+    xlabel('Time [s]') % x-axis label
+    ylabel('Distance in X [m]') % y-axis label
+    legend('Ground Truth','Estimation')
+    
+    subplot(2,2,2);
+    plot(tm, loc(:,2),'b');
+    hold on;
+    plot(tm, posEst(:,2),'r');
+    title('Estimation of Y position')
+    xlabel('Time [s]') % x-axis label
+    ylabel('Distance in Y [m]') % y-axis label
+    legend('Ground Truth','Estimation')
+    
+    subplot(2,2,3);
+    plot(tm, loc(:,3),'b');
+    hold on;
+    plot(tm, oriEst(:,1),'r');
+    title('Estimation of orientation')
+    xlabel('Time [s]') % x-axis label
+    ylabel('Orientation [rad]') % y-axis label
+    legend('Ground Truth','Estimation')
 end
     
 return;

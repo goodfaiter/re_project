@@ -126,10 +126,9 @@ predYVar = predVar(end,2);
 predOriVar = predVar(end,3);
 Pp = [predXVar 0 0
     0 predYVar 0
-    predOriVar 0 0];
+    0 0 predOriVar];
 
 %Estimation Update:
-%Mean:
 H = [0 0 1
      0 0 1
      predX*(predX^2 + predY^2)^(-1/2) predY*(predX^2 + predY^2)^(-1/2) 0];
@@ -144,17 +143,29 @@ dNoise = estConst.DistNoise;
 Qb = estConst.GyroDriftPSD;
 
 R = [cNoise 0 0 0;
-    0 gNoise 0 0;
-    0 0 dNoise 0;
-    0 0 0 Qb];
+    0 Qb 0 0;
+    0 0 gNoise 0;
+    0 0 0 dNoise];
 
 K = Pp * H' * inv(H*Pp*H' + M*R*M');
 
 hk = [predOri
     predOri
     (predX^2 + predY^2)^(1/2)];
+
+%Mean:
+if sense(1) == Inf
+    sense(1) = prevX;
+end
+if sense(2) == Inf
+    sense(2) = prevY;
+end
+if sense(3) == Inf    
+    sense(3) = prevOri;
+end
 xm = xp + K * (sense'-hk);
 
+%Variance:
 Pm = (eye(3) - K*H)*Pp;
 
 % Replace the following:
