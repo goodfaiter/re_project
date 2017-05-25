@@ -57,7 +57,7 @@ if nargin==0
    estConst = EstimatorConstants();
    
    % Generate plots by default.
-   doplot=false;
+   doplot=true;
    
    % use random seed
    seed = 0;
@@ -122,6 +122,9 @@ if doplot
     plot(tm, loc(:,1),'b');
     hold on;
     plot(tm, posEst(:,1),'r');
+    plot(tm, posEst(:,1)+sqrt(posVar(:,1)),'r--');
+    plot(tm, posEst(:,1)-sqrt(posVar(:,1)),'r--');
+    plot(tm, posEst(:,1),'r');
     title('Estimation of X position')
     xlabel('Time [s]') % x-axis label
     ylabel('Distance in X [m]') % y-axis label
@@ -140,7 +143,20 @@ if doplot
     plot(tm, loc(:,3),'b');
     hold on;
     plot(tm, oriEst(:,1),'r');
+    plot(tm, oriEst(:,1)+sqrt(oriVar(:,1)),'r--');
+    plot(tm, oriEst(:,1)-sqrt(oriVar(:,1)),'r--');
     title('Estimation of orientation')
+    xlabel('Time [s]') % x-axis label
+    ylabel('Orientation [rad]') % y-axis label
+    legend('Ground Truth','Estimation')
+    
+    subplot(2,2,4);
+    plot(tm, drift(:,1),'b');
+    hold on;
+    plot(tm, driftEst(:,1),'r');
+    plot(tm, driftEst(:,1)+sqrt(driftVar(:,1)),'r--');
+    plot(tm, driftEst(:,1)-sqrt(driftVar(:,1)),'r--');
+    title('Estimation of drift')
     xlabel('Time [s]') % x-axis label
     ylabel('Orientation [rad]') % y-axis label
     legend('Ground Truth','Estimation')

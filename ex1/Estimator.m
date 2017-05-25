@@ -100,6 +100,10 @@ Uv = actuate(1);
 Ur = actuate(2);
 B = estConst.WheelBase;
 W = estConst.WheelRadius;
+cNoise = estConst.CompassNoise;
+gNoise = estConst.GyroNoise;
+dNoise = estConst.DistNoise;
+Qb = estConst.GyroDriftPSD;
 
 %Prior update/Prediction step
 %Mean:
@@ -110,9 +114,11 @@ x0 = [prevX prevY prevOri];
 predX = predMean(end,1);
 predY = predMean(end,2);
 predOri = predMean(end,3);
+predDrift = prevDrift;
 xp = [predX
     predY
-    predOri];
+    predOri
+    predDrift];
 
 %Variace:
 tspan = [tm-time_step tm];
@@ -124,31 +130,28 @@ x0 = [prevXVar
 predXVar = predVar(end,1);
 predYVar = predVar(end,2);
 predOriVar = predVar(end,3);
-Pp = [predXVar 0 0
-    0 predYVar 0
-    0 0 predOriVar];
+predDriftVar = Qb*tm + prevDriftVar;
+Pp = [predXVar 0 0 0
+    0 predYVar 0 0
+    0 0 predOriVar 0
+    0 0 0 predDriftVar];
 
 %Estimation Update:
 % H = [0 0 1
 %      0 0 1
 %      predX*(predX^2 + predY^2)^(-1/2) predY*(predX^2 + predY^2)^(-1/2) 0];
-H = [0 0 1
-     0 0 1
-     predX*(predX^2 + predY^2)^(-1/2) predY*(predX^2 + predY^2)^(-1/2) 0];
+H = [0 0 1 0
+     0 0 1 1
+     predX*(predX^2 + predY^2)^(-1/2) predY*(predX^2 + predY^2)^(-1/2) 0 0];
 
 M = [1 0 0 0
-      0 1 1 0
-      0 0 0 1];
+      0 1 0 0
+      0 0 1 0];
 
 % M = eye(3);
 
-cNoise = estConst.CompassNoise;
-gNoise = estConst.GyroNoise;
-dNoise = estConst.DistNoise;
-Qb = estConst.GyroDriftPSD;
-
 R = [cNoise^2 0 0 0;
-    0 Qb^2 0 0;
+    0 Qb 0 0;
     0 0 gNoise^2 0;
     0 0 0 dNoise^2];
 
@@ -178,15 +181,15 @@ end
 xm = xp + K * (sense'-hk);
 
 %Variance:
-Pm = (eye(3) - K*H)*Pp;
+Pm = (eye(4) - K*H)*Pp;
 
 % Replace the following:
 posEst = [xm(1) xm(2)];
 oriEst = xm(3);
-driftEst = 0;
-posVar = [Pm(1) Pm(2)];
-oriVar = Pm(3);
-driftVar = 0;
+driftEst = xm(4);
+posVar = [Pm(1,1) Pm(2,2)];
+oriVar = Pm(3,3);
+driftVar = Pm(4,4);
 estState = [posEst oriEst driftEst posVar oriVar driftVar tm];
 
 end
