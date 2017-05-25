@@ -103,7 +103,7 @@ W = estConst.WheelRadius;
 
 %Prior update/Prediction step
 %Mean:
-tspan = [tm tm+time_step];
+tspan = [tm-time_step tm];
 x0 = [prevX prevY prevOri];
 [~,predMean] = ode45(@(t,x) odefcn(t,x, estConst, estState, actuate), tspan, x0);
 
@@ -115,7 +115,7 @@ xp = [predX
     predOri];
 
 %Variace:
-tspan = [tm tm+time_step];
+tspan = [tm-time_step tm];
 x0 = [prevXVar
       prevYVar
       prevOriVar];
@@ -129,6 +129,9 @@ Pp = [predXVar 0 0
     0 0 predOriVar];
 
 %Estimation Update:
+% H = [0 0 1
+%      0 0 1
+%      predX*(predX^2 + predY^2)^(-1/2) predY*(predX^2 + predY^2)^(-1/2) 0];
 H = [0 0 1
      0 0 1
      predX*(predX^2 + predY^2)^(-1/2) predY*(predX^2 + predY^2)^(-1/2) 0];
@@ -137,31 +140,40 @@ M = [1 0 0 0
       0 1 1 0
       0 0 0 1];
 
+% M = eye(3);
+
 cNoise = estConst.CompassNoise;
 gNoise = estConst.GyroNoise;
 dNoise = estConst.DistNoise;
 Qb = estConst.GyroDriftPSD;
 
-R = [cNoise 0 0 0;
-    0 Qb 0 0;
-    0 0 gNoise 0;
-    0 0 0 dNoise];
+R = [cNoise^2 0 0 0;
+    0 Qb^2 0 0;
+    0 0 gNoise^2 0;
+    0 0 0 dNoise^2];
 
-K = Pp * H' * inv(H*Pp*H' + M*R*M');
+% R = diag([cNoise^2 gNoise^2 dNoise^2]);
+
+K = Pp * H' / (H*Pp*H' + M*R*M');
 
 hk = [predOri
     predOri
     (predX^2 + predY^2)^(1/2)];
 
 %Mean:
+conversion_sense = sense;
+sense(1) = conversion_sense(2);
+sense(2) = conversion_sense(3);
+sense(3) = conversion_sense(1);
+
 if sense(1) == Inf
-    sense(1) = prevX;
+    sense(1) = predOri;
 end
 if sense(2) == Inf
-    sense(2) = prevY;
+    sense(2) = predOri;
 end
 if sense(3) == Inf    
-    sense(3) = prevOri;
+    sense(3) = (predX^2 + predY^2)^(1/2);
 end
 xm = xp + K * (sense'-hk);
 
@@ -216,6 +228,8 @@ prevYVar = estState(6);
 prevOriVar = estState(7);
 prevDriftVar = estState(8);
 
+time_step = tm - estState(9);
+
 Uv = actuate(1);
 Ur = actuate(2);
 B = estConst.WheelBase;
@@ -225,7 +239,7 @@ Qv = estConst.VelocityInputPSD;
 Sv = W*Uv;
 St = Sv*cos(Ur);
 Sr = -Sv*sin(Ur)/B;
-r = Sr*(t-tm) + prevOri;
+r = Sr*(t-(tm-time_step)) + prevOri;
 
 % dydt = zeros(3);
 
@@ -235,7 +249,7 @@ r = Sr*(t-tm) + prevOri;
  
 L = [St*cos(r)
      St*sin(r)
-     Sr];
+     Sr]*Qv^(1/2);
  
 % dydt = A*x + x*A' + L*Qv*L';
 dydt = zeros(3,1);

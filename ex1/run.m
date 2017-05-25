@@ -57,7 +57,7 @@ if nargin==0
    estConst = EstimatorConstants();
    
    % Generate plots by default.
-   doplot=true;
+   doplot=false;
    
    % use random seed
    seed = 0;
@@ -109,7 +109,11 @@ end
 
 % Calculate the total tracking error.
 % Replace the following:
-trackErrorNorm = 0;
+e = 0;
+for n = 1:N
+   e = e + (loc(n,1)-posEst(n,1))^2 + (loc(n,2)-posEst(n,2))^2;
+end
+trackErrorNorm = (e/N)^(1/2);
 
 if doplot
     % Add your plots here to debug the estimator and verify your
