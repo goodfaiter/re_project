@@ -60,7 +60,7 @@ if nargin==0
    doplot=true;
    
    % use random seed
-   seed = 0;
+   seed = 1;
 end
 
 
@@ -124,7 +124,6 @@ if doplot
     plot(tm, posEst(:,1),'r');
     plot(tm, posEst(:,1)+sqrt(posVar(:,1)),'r--');
     plot(tm, posEst(:,1)-sqrt(posVar(:,1)),'r--');
-    plot(tm, posEst(:,1),'r');
     title('Estimation of X position')
     xlabel('Time [s]') % x-axis label
     ylabel('Distance in X [m]') % y-axis label
@@ -134,6 +133,8 @@ if doplot
     plot(tm, loc(:,2),'b');
     hold on;
     plot(tm, posEst(:,2),'r');
+    plot(tm, posEst(:,2)+sqrt(posVar(:,2)),'r--');
+    plot(tm, posEst(:,2)-sqrt(posVar(:,2)),'r--');
     title('Estimation of Y position')
     xlabel('Time [s]') % x-axis label
     ylabel('Distance in Y [m]') % y-axis label

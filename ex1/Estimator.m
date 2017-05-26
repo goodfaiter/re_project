@@ -70,8 +70,8 @@ if (tm == 0)
     posEst = [0 0];    
     oriEst = 0;    
     driftEst = 0;
-    posVar = [(2*estConst.TranslationStartBound)^2 (2*estConst.TranslationStartBound)^2]*1/12;
-    oriVar = (2*estConst.RotationStartBound)^2*1/12;
+    posVar = [(estConst.TranslationStartBound)^2 (estConst.TranslationStartBound)^2]*1/3;
+    oriVar = ((estConst.RotationStartBound)^2)*1/3;
     driftVar = 0;
     estState = [posEst oriEst driftEst posVar oriVar driftVar tm];
 
@@ -107,14 +107,23 @@ Qb = estConst.GyroDriftPSD;
 
 %Prior update/Prediction step
 %Mean:
-tspan = [tm-time_step tm];
-x0 = [prevX prevY prevOri];
-[~,predMean] = ode45(@(t,x) odefcn(t,x, estConst, estState, actuate), tspan, x0);
+% tspan = [tm-time_step tm];
+% x0 = [prevX prevY prevOri];
+% [~,predMean] = ode45(@(t,x) odefcn(t,x, estConst, estState, actuate), tspan, x0);
+% 
+% predX = predMean(end,1);
+% predY = predMean(end,2);
+% predOri = predMean(end,3);
 
-predX = predMean(end,1);
-predY = predMean(end,2);
-predOri = predMean(end,3);
+Sv = W*Uv;
+St = Sv*cos(Ur);
+Sr = -Sv*sin(Ur)/B;
+
+predX = St/Sr*sin(Sr*tm-Sr*(tm-time_step)+prevOri) - St/Sr*sin(prevOri) + prevX;
+predY = -St/Sr*cos(Sr*tm-Sr*(tm-time_step)+prevOri) + St/Sr*cos(prevOri) + prevY;
+predOri = Sr*(tm-(tm-time_step))+prevOri;
 predDrift = prevDrift;
+
 xp = [predX
     predY
     predOri
@@ -130,7 +139,7 @@ x0 = [prevXVar
 predXVar = predVar(end,1);
 predYVar = predVar(end,2);
 predOriVar = predVar(end,3);
-predDriftVar = Qb*tm + prevDriftVar;
+predDriftVar = Qb*(time_step) + prevDriftVar;
 Pp = [predXVar 0 0 0
     0 predYVar 0 0
     0 0 predOriVar 0
@@ -144,23 +153,23 @@ H = [0 0 1 0
      0 0 1 1
      predX*(predX^2 + predY^2)^(-1/2) predY*(predX^2 + predY^2)^(-1/2) 0 0];
 
-M = [1 0 0 0
-      0 1 0 0
-      0 0 1 0];
+% M = [1 0 0 0
+%       0 1 0 0
+%       0 0 1 0];
 
-% M = eye(3);
+M = eye(3);
 
-R = [cNoise^2 0 0 0;
-    0 Qb 0 0;
-    0 0 gNoise^2 0;
-    0 0 0 dNoise^2];
+% R = [cNoise^2 0 0 0;
+%     0 gNoise^2 0 0;
+%     0 0 dNoise^2 0;
+%     0 0 0 Qb];
 
-% R = diag([cNoise^2 gNoise^2 dNoise^2]);
+R = diag([cNoise^2 gNoise^2 dNoise^2]);
 
 K = Pp * H' / (H*Pp*H' + M*R*M');
 
-hk = [predOri
-    predOri
+hk = [predOri;
+    predOri + predDrift;
     (predX^2 + predY^2)^(1/2)];
 
 %Mean:
@@ -173,7 +182,7 @@ if sense(1) == Inf
     sense(1) = predOri;
 end
 if sense(2) == Inf
-    sense(2) = predOri;
+    sense(2) = predOri + predDrift;
 end
 if sense(3) == Inf    
     sense(3) = (predX^2 + predY^2)^(1/2);
@@ -257,6 +266,6 @@ L = [St*cos(r)
 % dydt = A*x + x*A' + L*Qv*L';
 dydt = zeros(3,1);
 dydt(1) = L(1)^2;
-dydt(2) = L(3)^2;
+dydt(2) = L(2)^2;
 dydt(3) = L(3)^2;
 end
