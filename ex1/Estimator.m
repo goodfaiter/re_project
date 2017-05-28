@@ -104,6 +104,7 @@ cNoise = estConst.CompassNoise;
 gNoise = estConst.GyroNoise;
 dNoise = estConst.DistNoise;
 Qb = estConst.GyroDriftPSD;
+Qv = estConst.VelocityInputPSD;
 
 %Prior update/Prediction step
 %Mean:
@@ -121,7 +122,7 @@ Sr = -Sv*sin(Ur)/B;
 
 predX = St/Sr*sin(Sr*tm-Sr*(tm-time_step)+prevOri) - St/Sr*sin(prevOri) + prevX;
 predY = -St/Sr*cos(Sr*tm-Sr*(tm-time_step)+prevOri) + St/Sr*cos(prevOri) + prevY;
-predOri = Sr*(tm-(tm-time_step))+prevOri;
+predOri = Sr*(time_step)+prevOri;
 predDrift = prevDrift;
 
 xp = [predX
@@ -130,15 +131,20 @@ xp = [predX
     predDrift];
 
 %Variace:
-tspan = [tm-time_step tm];
-x0 = [prevXVar
-      prevYVar
-      prevOriVar];
-[~,predVar] = ode45(@(t,x) odefcn1(t,x, estConst, estState, actuate, tm), tspan, x0);
+% tspan = [tm-time_step tm];
+% x0 = [prevXVar
+%       prevYVar
+%       prevOriVar];
+% [~,predVar] = ode45(@(t,x) odefcn1(t,x, estConst, estState, actuate, tm), tspan, x0);
 
-predXVar = predVar(end,1);
-predYVar = predVar(end,2);
-predOriVar = predVar(end,3);
+% predXVar = predVar(end,1);
+% predYVar = predVar(end,2);
+% predOriVar = predVar(end,3)
+
+r = Sr*(time_step) + prevOri;
+predXVar = Qv*St^2/2*(  time_step + sin(2*r)/(2*Sr) - sin(2*prevOri)/(2*Sr)  ) + prevXVar;
+predYVar = Qv*St^2/2*(  time_step - sin(2*r)/(2*Sr) + sin(2*prevOri)/(2*Sr)  ) + prevYVar;
+predOriVar = Qv*( Sr^2*time_step ) + prevOriVar;
 predDriftVar = Qb*(time_step) + prevDriftVar;
 Pp = [predXVar 0 0 0
     0 predYVar 0 0
@@ -146,25 +152,13 @@ Pp = [predXVar 0 0 0
     0 0 0 predDriftVar];
 
 %Estimation Update:
-% H = [0 0 1
-%      0 0 1
-%      predX*(predX^2 + predY^2)^(-1/2) predY*(predX^2 + predY^2)^(-1/2) 0];
 H = [0 0 1 0
      0 0 1 1
      predX*(predX^2 + predY^2)^(-1/2) predY*(predX^2 + predY^2)^(-1/2) 0 0];
 
-% M = [1 0 0 0
-%       0 1 0 0
-%       0 0 1 0];
-
 M = eye(3);
 
-% R = [cNoise^2 0 0 0;
-%     0 gNoise^2 0 0;
-%     0 0 dNoise^2 0;
-%     0 0 0 Qb];
-
-R = diag([cNoise^2 gNoise^2 dNoise^2]);
+R = diag([cNoise gNoise dNoise]);
 
 K = Pp * H' / (H*Pp*H' + M*R*M');
 

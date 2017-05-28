@@ -60,7 +60,7 @@ if nargin==0
    doplot=true;
    
    % use random seed
-   seed = 1;
+   seed = 0;
 end
 
 
@@ -118,7 +118,7 @@ trackErrorNorm = (e/N)^(1/2);
 if doplot
     % Add your plots here to debug the estimator and verify your
     % implementation.
-    subplot(2,2,1);
+    subplot(2,3,1);
     plot(tm, loc(:,1),'b');
     hold on;
     plot(tm, posEst(:,1),'r');
@@ -129,7 +129,7 @@ if doplot
     ylabel('Distance in X [m]') % y-axis label
     legend('Ground Truth','Estimation')
     
-    subplot(2,2,2);
+    subplot(2,3,2);
     plot(tm, loc(:,2),'b');
     hold on;
     plot(tm, posEst(:,2),'r');
@@ -140,7 +140,7 @@ if doplot
     ylabel('Distance in Y [m]') % y-axis label
     legend('Ground Truth','Estimation')
     
-    subplot(2,2,3);
+    subplot(2,3,3);
     plot(tm, loc(:,3),'b');
     hold on;
     plot(tm, oriEst(:,1),'r');
@@ -151,7 +151,7 @@ if doplot
     ylabel('Orientation [rad]') % y-axis label
     legend('Ground Truth','Estimation')
     
-    subplot(2,2,4);
+    subplot(2,3,4);
     plot(tm, drift(:,1),'b');
     hold on;
     plot(tm, driftEst(:,1),'r');
@@ -161,6 +161,16 @@ if doplot
     xlabel('Time [s]') % x-axis label
     ylabel('Orientation [rad]') % y-axis label
     legend('Ground Truth','Estimation')
+    
+    subplot(2,3,5);
+    plot(tm, (loc(:,1).^2 + loc(:,2).^2).^(1/2),'b');
+    hold on;
+    plot(tm, (posEst(:,1).^2 + posEst(:,2).^2).^(1/2),'r');
+    title('Estimation of Distance')
+    xlabel('Time [s]') % x-axis label
+    ylabel('Distance [m]') % y-axis label
+    legend('Ground Truth','Estimation')
+    
 end
     
 return;
